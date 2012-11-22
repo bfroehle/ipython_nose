@@ -3,7 +3,9 @@ import cgi
 import StringIO
 
 import nose.core
-from nose import loader as nose_loader
+import nose.loader
+
+from IPython.core.magic import Magics, magics_class, line_magic
 
 class TestResult(nose.core.TextTestResult):
     _nose_css = '''\
@@ -119,16 +121,19 @@ class TestRunner(nose.core.TextTestRunner):
                           self.verbosity,
                           self.config)
 
-def nose(line):
-    test_module = types.ModuleType('test_module')
-    test_module.__dict__.update(get_ipython().user_ns)
+@magics_class
+class NoseMagics(Magics):
 
-    loader = nose_loader.TestLoader()
-    tests = loader.loadTestsFromModule(test_module)
+    @line_magic
+    def nose(self, line):
+        test_module = types.ModuleType('test_module')
+        test_module.__dict__.update(get_ipython().user_ns)
 
-    stream = StringIO.StringIO() # Hide output
-    return TestRunner(verbosity=0, stream=stream).run(tests)
+        loader = nose.loader.TestLoader()
+        tests = loader.loadTestsFromModule(test_module)
 
-def load_ipython_extension(ipython):
-    from IPython.core.magic import register_line_magic
-    register_line_magic(nose)
+        stream = StringIO.StringIO() # Hide output
+        return TestRunner(verbosity=0, stream=stream).run(tests)
+
+def load_ipython_extension(ip):
+    ip.register_magics(NoseMagics)
